@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use PHPHtmlParser\Dom;
 use Illuminate\Support\Facades\Storage;
 use ZipArchive;
@@ -44,11 +45,11 @@ class ScraperController extends Controller
         ]);
 
         $dom = new Dom;
-        $dom->loadFromFile($request->url);
-        $contents = $dom->find('.results-by-facets .product');
         $items = [];
 
         try {
+            $dom->loadFromFile($request->url);
+            $contents = $dom->find('.results-by-facets .product');
             foreach ($contents as $key => $content) {
                 $child   = $content->firstChild();
                 $sibling = $child->nextSibling();
@@ -87,11 +88,12 @@ class ScraperController extends Controller
             if ($jsonData) {
                 Storage::disk('public')->put('scraped_data.json', $jsonData);
             }
+            return view('pages.scraped_data', compact('items'));
         } catch (\Throwable $th) {
-            dd($th);
+            Log::error($th);
         }
 
-        return view('pages.scraped_data', compact('items'));
+        return redirect()->back()->withErrors(["url" => "This URL Not supported"]);
     }
 
     public function scrapedImagesDownload()
@@ -111,7 +113,7 @@ class ScraperController extends Controller
             }
             return response()->download(public_path($fileName));
         } catch (\Throwable $th) {
-            dd($th);
+            Log::error($th);
         }
     }
 
@@ -174,23 +176,28 @@ class ScraperController extends Controller
                 $data = json_decode($contents, true);
                 $getData = [];
                 foreach ($data as $value) {
-                    if ($value['saved_search'] !== []) {
+                    if (array_key_exists('saved_search', $value) && $value['saved_search'] !== []) {
                         $getSavedData = $value['saved_search'][0];
                         $getData[] = $getSavedData['keys'];
                     }
                 }
-
-                $jsonData = json_encode($getData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                if ($jsonData) {
+                if (count($getData) > 0) {
+                    $jsonData = json_encode($getData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                     Storage::disk('public')->put('json_data.json', $jsonData);
                     $filePath = storage_path('app/public/json_data.json');
                     return response()->download($filePath);
+                } else {
+                    return redirect()
+                        ->back()
+                        ->withErrors(["json-file" => "File is not supported, Please Upload raw_saved_search.json file"]);
                 }
+            } else {
+                return redirect()
+                    ->back()
+                    ->withErrors(["json-file" => "File is not supported"]);
             }
         } catch (\Throwable $th) {
-            return redirect()
-                ->back()
-                ->withErrors(["json-file" => "File is not supported, Please Upload raw_saved_search.json file"]);
+            Log::error($th);
         }
     }
 }
