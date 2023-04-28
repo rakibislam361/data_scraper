@@ -7,7 +7,7 @@
         <form class="form-inline" action="{{ route('scrap-url.store') }}" method="POST">
           @csrf
           <input class="form-control mr-sm-2 w-75" name="url" type="text" placeholder="https://www.example.com" aria-label="url">
-          <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+          <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Submit</button>
         </form>
         @if ($errors->has('url'))
         <p class="text-danger">
