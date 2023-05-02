@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -60,17 +59,21 @@ class ScraperController extends Controller
                     $items[$key]['title'] = trim($title->text);
                 }
 
-                $image = $dom->find('.product-image-front img[src]')[0];
-                if ($image) {
-                    $image = $image->getAttribute('src');
-                    $items[$key]['image'] = trim($image);
+                try {
+                    $image = $dom->find('.product-image-front img[src]')[0];
+                    if ($image) {
+                        $image = $image->getAttribute('src');
+                        $items[$key]['image'] = trim($image);
 
-                    // Get the image contents from the URL
-                    $contents = file_get_contents($image);
+                        // Get the image contents from the URL
+                        $contents = file_get_contents($image);
 
-                    // Store the image in the storage/app/public directory
-                    $fileName = basename($image);
-                    Storage::put("public/images/$fileName", $contents);
+                        // Store the image in the storage/app/public directory
+                        $fileName = basename($image);
+                        Storage::put("public/images/$fileName", $contents);
+                    }
+                } catch (\Throwable $th) {
+                    //throw $th;
                 }
 
                 $price = $dom->find('.amount')[0];
